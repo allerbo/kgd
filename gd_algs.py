@@ -2,7 +2,7 @@ import numpy as np
 
 class gd_alg():
   def __init__(self, K, y, alg, space='par', lr=0.01, alpha_egd=0.5, var0=None):
-    assert space in ['par', 'pred'], 'Non-valid space!'
+    assert space in ['par', 'pred', 'orac'], 'Non-valid space!'
     assert alg in ['cd', 'gd', 'egd', 'sgd', 'esgd', 'adam'], 'Non-valid alg!'
     self.K=K
     self.y=y
@@ -18,7 +18,7 @@ class gd_alg():
         self.var=var0
       self.m=np.zeros((n,1))
       self.v=np.zeros((n,1))
-    elif space=='pred':
+    elif space=='pred' or space=='orac':
       ns=K.shape[0]
       if var0 is None:
         self.var=np.zeros((ns,1))
@@ -38,6 +38,8 @@ class gd_alg():
       grad = self.K@self.var-self.y 
     elif self.space=='pred':
       grad = self.K@(self.Ih@self.var-self.y)
+    elif self.space=='orac':
+      grad = self.K@(self.var-self.y)
     if self.alg=='cd':
       I_cd=(np.abs(grad)==np.max(np.abs(grad)))
       self.var-= self.lr*I_cd*np.sign(grad)

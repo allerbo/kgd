@@ -15,6 +15,7 @@ def kern_gauss(X1,X2,sigma):
   return np.exp(-0.5*D2/sigma**2)
 
 def pen_reg(K, Ks, y, lbda, nrm, space):
+    #if space=='orac': space='pred'
     K_tr=K if space=='par' else Ks
     prox_obj=prox_grad(K_tr,y,lbda,nrm,space)
     var_old=np.ones(K_tr.shape[0])
@@ -29,7 +30,13 @@ def pen_reg(K, Ks, y, lbda, nrm, space):
 def gd_reg(K, Ks, y, t, alg, space, y1_lbda):
     mse_max=100
     step_size=0.0001
-    K_tr=K if space=='par' else Ks
+    if space=='par':
+      K_tr=K 
+    elif space=='pred':
+      K_tr=Ks
+    #elif space=='orac':
+    #  K_tr=Kss
+    #y_tr=Ks@np.linalg.solve(K,y) if space=='orac' else y
     gd_obj=gd_alg(K_tr,y,alg,space,step_size)
     best_mse=np.inf
     best_y1=np.zeros((Ks.shape[0],1))
@@ -44,7 +51,7 @@ def gd_reg(K, Ks, y, t, alg, space, y1_lbda):
       else:
         y1=gd_obj.get_fs()
       #mse=np.mean(np.abs(y1-y1_lbda))
-      if space=='pred' and alg=='sgd':
+      if space =='pred' and alg=='sgd':
         mse=np.mean((np.max(np.abs(y1))-np.max(np.abs(y1_lbda)))**2)
       else:
         mse=np.mean((y1-y1_lbda)**2)
@@ -78,27 +85,29 @@ xs_argsort=xs.argsort(0)
 sigma=0.3
 K=kern_gauss(x,x,sigma)
 Ks=kern_gauss(xs,x,sigma)
+#Kss=kern_gauss(xs,xs,sigma)
 alphah0=np.linalg.solve(K,y)
 fsh0=Ks@alphah0
 
-fig1,axs1=plt.subplots(4,3,figsize=(12,9))
-fig2,axs2=plt.subplots(4,3,figsize=(12,9))
-fig3,axs3=plt.subplots(4,3,figsize=(12,9))
-for axs in (axs1, axs2, axs3):
+fig1,axs1=plt.subplots(4,3,figsize=(10,8))
+fig2,axs2=plt.subplots(4,3,figsize=(10,8))
+#fig3,axs3=plt.subplots(4,3,figsize=(99,6))
+fig_a,axs_a=plt.subplots(4,3,figsize=(10,8))
+for axs in (axs1, axs2, axs_a):
   axs[0,0].set_title('$\\ell_2$ and Gradient Flow')
   axs[0,1].set_title('$\\ell_\\inf$ and Sign Gradient Descent')
   axs[0,2].set_title('$\\ell_1$ and Coordinate Descent')
 
 labs=['Observed Data','Penalized Solution', 'Early Stopping Solution', 'Non- and Fully Reguralized Solutions']
-labs3=['Penalized Solution', 'Early Stopping Solution', 'Non-reguralized Solution']
+labs_a=['Penalized Solution', 'Early Stopping Solution', 'Non-reguralized Solution']
 lines=[plt.plot(0,0,'ok')[0]]
 plt.cla()
 for c in ['C0','C2','C7']:
   lines.append(Line2D([0],[0],color=c,lw=2))
-lines3=[]
+lines_a=[]
 plt.cla()
 for c in ['C0','C2','silver']:
-  lines3.append(Line2D([0],[0],color=c,lw=2))
+  lines_a.append(Line2D([0],[0],color=c,lw=2))
 
 
 dict_lbda={'lbda_pred': {'l2': [], 'linf': [], 'l1': []}, 'lbda_par': {'l2': [], 'linf': [], 'l1': []}}
@@ -110,15 +119,17 @@ dict_lbda['lbda_par']['l2']=[4,2, 1, .3]
 dict_lbda['lbda_par']['linf']=[5e-3, 4e-3, 2.5e-3, 3e-4]
 dict_lbda['lbda_par']['l1']=[3e-3,1e-3, 7e-4, 3e-4]
 
+#dict_lbda['lbda_orac']= dict_lbda['lbda_pred']
+
 BW=0.35
-#for space,fig,axs in zip(['pred','par'],[fig1,fig2],[axs1,axs2]):
-for space,fig,axs in zip(['par','pred'],[fig1,fig2],[axs1,axs2]):
+LW=2
+for space,fig,axs in zip(['pred','par'],[fig1,fig2],[axs1,axs2]):
   if space=='par':
     fig.suptitle('Parameter Space')
-    fig3.suptitle('Parameter Space, alpha')
-    fig3.legend(lines3, labs3, loc='lower center', ncol=3)
-    fig3.tight_layout()
-    fig3.subplots_adjust(bottom=0.08)
+    fig_a.suptitle('Parameter Space, alpha')
+    fig_a.legend(lines_a, labs_a, loc='lower center', ncol=3)
+    fig_a.tight_layout()
+    fig_a.subplots_adjust(bottom=0.08)
   else:
     fig.suptitle('Prediction Space')
   fig.legend(lines, labs, loc='lower center', ncol=4)
@@ -140,12 +151,12 @@ for space,fig,axs in zip(['par','pred'],[fig1,fig2],[axs1,axs2]):
         lbda=dict_lbda['lbda_'+space][nrm][a_r]
         fsh_lbda, alpha_lbda=pen_reg(K,Ks,y, lbda, nrm, space)
         fsh_t, alpha_t=gd_reg(K,Ks,y,t,alg,space, fsh_lbda)
-      axs[a_r,a_c].plot(xs[xs_argsort,0],fsh_lbda[xs_argsort,0],'C0',ls=(0,[3,2]))
-      axs[a_r,a_c].plot(xs[xs_argsort,0],fsh_t[xs_argsort,0],'C2',ls=(0,[2,2]))
+      axs[a_r,a_c].plot(xs[xs_argsort,0],fsh_lbda[xs_argsort,0],'C0',ls=(0,[3,2]),lw=LW)
+      axs[a_r,a_c].plot(xs[xs_argsort,0],fsh_t[xs_argsort,0],'C2',ls=(0,[2,2]),lw=LW)
       fig.savefig('figures/compare_pen_'+space+'.pdf')
       if space=='par':
-        axs3[a_r,a_c].bar(np.arange(n),np.squeeze(alphah0),color='silver', width=2*BW)
-        axs3[a_r,a_c].bar(np.arange(n)-BW/2,np.squeeze(alpha_lbda),color='C0', width=BW)
-        axs3[a_r,a_c].bar(np.arange(n)+BW/2,np.squeeze(alpha_t),color='C2', width=BW)
-      fig3.savefig('figures/compare_pen_'+space+'_alpha.pdf')
+        axs_a[a_r,a_c].bar(np.arange(n),np.squeeze(alphah0),color='silver', width=2*BW)
+        axs_a[a_r,a_c].bar(np.arange(n)-BW/2,np.squeeze(alpha_lbda),color='C0', width=BW)
+        axs_a[a_r,a_c].bar(np.arange(n)+BW/2,np.squeeze(alpha_t),color='C2', width=BW)
+        fig_a.savefig('figures/compare_pen_'+space+'_alpha.pdf')
 
