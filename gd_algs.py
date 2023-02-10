@@ -1,7 +1,26 @@
 import numpy as np
 
+def kgd(xs,x_tr,y_tr,t,sigma0=None,step_size=0.01,gamma=0,alpha=0,kern=None, sigma_min=None):
+  sigma=np.max(x_tr)-np.min(x_tr) if sigma0 is None else sigma0
+  if kern is None:
+    kern = lambda x1, x2, sigma: np.exp(-0.5*np.square((x1-x2.T)/sigma))
+  y1=np.zeros(xs.shape)
+  for i in range(int(t/step_size)):
+    Ks=kern(xs,x_tr,sigma)
+    gd_obj=gd_alg(Ks,y_tr,'gd','pred',step_size, gamma=gamma,var0=y1)
+    if np.max(np.abs(y1))<1000:
+      gd_obj.gd_step()
+    y1=gd_obj.get_fs()
+    if alpha>0:
+      if sigma_min is None:
+        sigma=sigma/(1+alpha*step_size*sigma)
+      else:
+        sigma=(sigma-alpha*step_size*sigma_min**2)/(1+alpha*step_size*(sigma-2*sigma_min))
+        #problem if sigma_min=1/(alpha*step_size)
+  return y1
+
 class gd_alg():
-  def __init__(self, K, y, alg, space='par', lr=0.01, alpha_egd=0.5, var0=None):
+  def __init__(self, K, y, alg, space='par', lr=0.01, gamma=0, alpha_egd=0.5, var0=None):
     assert space in ['par', 'pred', 'orac'], 'Non-valid space!'
     assert alg in ['cd', 'gd', 'egd', 'sgd', 'esgd', 'adam'], 'Non-valid alg!'
     self.K=K
@@ -9,6 +28,7 @@ class gd_alg():
     self.alg=alg
     self.space=space
     self.lr=lr
+    self.gamma=gamma
     self.alpha_egd=alpha_egd
     n=y.shape[0]
     if space=='par':
@@ -27,6 +47,7 @@ class gd_alg():
       self.Ih=np.hstack((np.eye(n),np.zeros((n,ns-n))))
       self.m=np.zeros((ns,1))
       self.v=np.zeros((ns,1))
+    self.var_old=np.copy(self.var)
 
     self.b1=0.9
     self.b2=0.999
@@ -44,7 +65,10 @@ class gd_alg():
       I_cd=(np.abs(grad)==np.max(np.abs(grad)))
       self.var-= self.lr*I_cd*np.sign(grad)
     elif self.alg=='gd':
-      self.var-=self.lr*grad
+      #self.var-=self.lr*grad
+      diff=self.var-self.var_old
+      self.var_old=np.copy(self.var)
+      self.var+=self.gamma*diff-self.lr*grad
     elif self.alg=='egd':
       I_egd=(np.abs(grad)>=self.alpha_egd*np.max(np.abs(grad)))
       #self.var-= self.lr*I_egd*grad
