@@ -76,7 +76,7 @@ for i, (ax, sigma_krr) in enumerate(zip(axs_expl.ravel(), sigmas_krr_expl)):
   else:
     ax.set_title('KRR, $\\sigma='+str(sigma_krr)+'$')
     y1_krr=kern_gauss(xs,x_tr,sigma_krr)@np.linalg.solve(kern_gauss(x_tr,x_tr,sigma_krr)+lbda*np.eye(n_tr),y_tr)
-    y1_kgd=kgd(xs,x_tr,y_tr,t,step_size=step_size,alpha=alpha,gamma=gamma, sigma_min=sigma_krr)
+    y1_kgd,tt=kgd(xs,x_tr,y_tr,t,step_size=step_size,alpha=alpha,gamma=gamma, sigma_min=sigma_krr)
     #y1_kgd=kgd(xs,x_tr,y_tr,t,step_size=step_size,gamma=gamma,sigma0=sigma_krr)
     ax.plot(xs[xs_argsort,0],y1_krr[xs_argsort,0], 'C1')
     ax.plot(xs[xs_argsort,0],y1_kgd[xs_argsort,0], 'C2')
@@ -84,7 +84,7 @@ for i, (ax, sigma_krr) in enumerate(zip(axs_expl.ravel(), sigmas_krr_expl)):
   fig_expl.legend(lines, labs, loc='lower center', ncol=len(labs))
   fig_expl.tight_layout()
   fig_expl.subplots_adjust(bottom=.08)
-  fig_expl.savefig('figures/double_descent_expl.pdf')
+  fig_expl.savefig('figures/double_descent_expl_hej.pdf')
   
 sys.exit()
 

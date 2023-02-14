@@ -5,19 +5,23 @@ def kgd(xs,x_tr,y_tr,t,sigma0=None,step_size=0.01,gamma=0,alpha=0,kern=None, sig
   if kern is None:
     kern = lambda x1, x2, sigma: np.exp(-0.5*np.square((x1-x2.T)/sigma))
   y1=np.zeros(xs.shape)
+  Ks=kern(xs,x_tr,sigma)
+  gd_obj=gd_alg(Ks,y_tr,'gd','pred',step_size, gamma=gamma)
   for i in range(int(t/step_size)):
-    Ks=kern(xs,x_tr,sigma)
-    gd_obj=gd_alg(Ks,y_tr,'gd','pred',step_size, gamma=gamma,var0=y1)
-    if np.max(np.abs(y1))<1000:
-      gd_obj.gd_step()
+    y1_old=np.copy(y1)
+    gd_obj.gd_step()
     y1=gd_obj.get_fs()
+    if np.max(np.abs(y1))>1000 or np.max(np.abs(y1-y1_old))<1e-4:
+      break
+    #Update kernel
     if alpha>0:
       if sigma_min is None:
         sigma=sigma/(1+alpha*step_size*sigma)
       else:
         sigma=(sigma-alpha*step_size*sigma_min**2)/(1+alpha*step_size*(sigma-2*sigma_min))
-        #problem if sigma_min=1/(alpha*step_size)
-  return y1
+      Ks=kern(xs,x_tr,sigma)
+      gd_obj.update(Ks,y1)
+  return gd_obj.get_fs(), i*step_size
 
 class gd_alg():
   def __init__(self, K, y, alg, space='par', lr=0.01, gamma=0, alpha_egd=0.5, var0=None):
@@ -54,6 +58,10 @@ class gd_alg():
     self.eps=1e-7
     self.t=1
 
+  def update(self,K,var):
+    self.K=K
+    self.var=var
+
   def gd_step(self):
     if self.space=='par':
       grad = self.K@self.var-self.y 
@@ -65,10 +73,10 @@ class gd_alg():
       I_cd=(np.abs(grad)==np.max(np.abs(grad)))
       self.var-= self.lr*I_cd*np.sign(grad)
     elif self.alg=='gd':
-      #self.var-=self.lr*grad
-      diff=self.var-self.var_old
-      self.var_old=np.copy(self.var)
-      self.var+=self.gamma*diff-self.lr*grad
+      self.var-=self.lr*grad
+      #diff=self.var-self.var_old
+      #self.var_old=np.copy(self.var)
+      #self.var+=self.gamma*diff-self.lr*grad
     elif self.alg=='egd':
       I_egd=(np.abs(grad)>=self.alpha_egd*np.max(np.abs(grad)))
       #self.var-= self.lr*I_egd*grad
