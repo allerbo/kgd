@@ -49,9 +49,9 @@ t=1e4
 lbda=1/t
 
 
-TYPE='sweep_freqs'
 TYPE='double_descent'
-#TYPE='two_freqs'
+TYPE='two_freqs'
+TYPE='sweep_freqs'
 
 
 for arg in range(1,len(sys.argv)):
@@ -76,10 +76,10 @@ if TYPE=='sweep_freqs':
 else:
   FREQS=ONE_FREQ
   FREQS_EXPL=ONE_FREQ
-  fig,ax=plt.subplots(1,1,figsize=(14,6))
+  fig,ax_big=plt.subplots(1,1,figsize=(14,6))
   labs = ['Decreasing, Training Error', 'Constant, Training Error', 'Decreasing, Validation Error', 'Constant, Validation Error']
   lines=[Line2D([0],[0],color='C0',lw=3),Line2D([0],[0],color='C1',lw=3),Line2D([0],[0],color='C2',lw=3),Line2D([0],[0],color='C3',lw=3)]
-
+  
   if TYPE=='double_descent':
     SIGMAS=np.geomspace(2,1e-2,100)
     fig_expl,axs_expl=plt.subplots(3,2,figsize=(14,12))
@@ -146,7 +146,7 @@ for freq, sigmas, axs in zip(FREQS_EXPL, SIGMAS_EXPL, axs_expl):
   fig_expl.subplots_adjust(bottom=.08)
   fig_expl.savefig('figures/'+TYPE+'_expl.pdf')
 
-sys.exit()
+#sys.exit()
 
 
 
@@ -161,16 +161,16 @@ SEEDS=range(100)
 
 
 if TYPE=='double_descent':
-  r2_tr_kgdd=np.empty([len(SEEDS), len(FREQS), len(SIGMAS)])
-  r2_val_kgdd=np.empty([len(SEEDS), len(FREQS), len(SIGMAS)])
+  r2_tr_kgdd=np.zeros([len(SEEDS), len(FREQS), len(SIGMAS)])
+  r2_val_kgdd=np.zeros([len(SEEDS), len(FREQS), len(SIGMAS)])
 else:
-  r2_tr_kgdd=np.empty([len(SEEDS), len(FREQS), 1])
+  r2_tr_kgdd=np.zeros([len(SEEDS), len(FREQS), 1])
   r2_val_kgdd=np.empty([len(SEEDS), len(FREQS), 1])
 
-r2_tr_kgdc=np.empty([len(SEEDS), len(FREQS), len(SIGMAS)])
-r2_val_kgdc=np.empty([len(SEEDS), len(FREQS), len(SIGMAS)])
-r2_tr_krr=np.empty([len(SEEDS), len(FREQS), len(SIGMAS)])
-r2_val_krr=np.empty([len(SEEDS), len(FREQS), len(SIGMAS)])
+r2_tr_kgdc=np.zeros([len(SEEDS), len(FREQS), len(SIGMAS)])
+r2_val_kgdc=np.zeros([len(SEEDS), len(FREQS), len(SIGMAS)])
+r2_tr_krr=np.zeros([len(SEEDS), len(FREQS), len(SIGMAS)])
+r2_val_krr=np.zeros([len(SEEDS), len(FREQS), len(SIGMAS)])
 
 
 for i_seed, seed in enumerate(SEEDS):
@@ -231,27 +231,27 @@ for i_seed, seed in enumerate(SEEDS):
     axs[1].set_ylabel('Validation $R^2$')
     axs[1].set_ylim([-0.01,1.01])
   else:
-    ax.cla()
+    ax_big.cla()
     if TYPE=='two_freqs':
-      plot_med_q(ax,SIGMAS,np.repeat(r2_tr_kgdd[:(i_seed+1),:,:],len(SIGMAS),2),'C0',QUANT=0.25)
-      plot_med_q(ax,SIGMAS,np.repeat(r2_val_kgdd[:(i_seed+1),:,:],len(SIGMAS),2),'C2',QUANT=0.25)
+      plot_med_q(ax_big,SIGMAS,np.repeat(r2_tr_kgdd[:(i_seed+1),:,:],len(SIGMAS),2),'C0',QUANT=0.25)
+      plot_med_q(ax_big,SIGMAS,np.repeat(r2_val_kgdd[:(i_seed+1),:,:],len(SIGMAS),2),'C2',QUANT=0.25)
     elif TYPE=='double_descent':
-      plot_med_q(ax,SIGMAS,r2_tr_kgdd[:(i_seed+1),:,:],'C0',QUANT=0.25)
-      plot_med_q(ax,SIGMAS,r2_val_kgdd[:(i_seed+1),:,:],'C2',QUANT=0.25)
-    for i_sigma, sigma in enumerate(SIGMAS):
-      plot_med_q(ax,SIGMAS,r2_tr_krr[:(i_seed+1),:,:],'C1',QUANT=0.25)
-      plot_med_q(ax,SIGMAS,r2_val_krr[:(i_seed+1),:,:],'C3',QUANT=0.25)
-      if KGDC:
-        plot_med_q(ax,SIGMAS,r2_tr_kgdc[:(i_seed+1),:,:],'C1',QUANT=0.25)
-        plot_med_q(ax,SIGMAS,r2_val_kgdc[:(i_seed+1),:,:],'C3',QUANT=0.25)
-    for sigma in SIGMAS_EXPL:
+      plot_med_q(ax_big,SIGMAS,r2_tr_kgdd[:(i_seed+1),:,:],'C0',QUANT=0.25)
+      plot_med_q(ax_big,SIGMAS,r2_val_kgdd[:(i_seed+1),:,:],'C2',QUANT=0.25)
+    
+    plot_med_q(ax_big,SIGMAS,r2_tr_krr[:(i_seed+1),:,:],'C1',QUANT=0.25)
+    plot_med_q(ax_big,SIGMAS,r2_val_krr[:(i_seed+1),:,:],'C3',QUANT=0.25)
+    if KGDC:
+      plot_med_q(ax_big,SIGMAS,r2_tr_kgdc[:(i_seed+1),:,:],'C1',QUANT=0.25)
+      plot_med_q(ax_big,SIGMAS,r2_val_kgdc[:(i_seed+1),:,:],'C3',QUANT=0.25)
+    
+    for sigma in SIGMAS_EXPL[0]:
       if sigma>0 and sigma!=5:
-        ax.axvline(sigma,color='k')
-    ax.set_ylim([-0.01,1.01])
-    ax.set_xscale('log')
-
-
-
+        ax_big.axvline(sigma,color='k')
+    
+    ax_big.set_ylim([-0.01,1.01])
+    ax_big.set_xscale('log')
+          
   fig.legend(lines, labs, loc='lower center', ncol=len(labs))
   fig.tight_layout()
   fig.subplots_adjust(bottom=.1)

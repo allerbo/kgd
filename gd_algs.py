@@ -1,4 +1,129 @@
 import numpy as np
+from matplotlib import pyplot as plt
+from time import sleep
+
+def kgd3_pol(xs,x_tr,y_tr,step_size=0.01,p_max=np.inf, t_max=1e4, plot=False):
+  if plot:
+    fig,ax=plt.subplots(1,1,figsize=(12,12))
+    xs_argsort=xs.argsort(0)
+  kern = lambda x1, x2, p: (1+x1*x2.T)**p
+  p=1
+  y1=np.zeros(xs.shape)
+  Ks=kern(xs,x_tr,p)
+  gd_obj=gd_alg(Ks,y_tr,'gd','pred',step_size)
+  n_tr=y_tr.shape[0]
+  r2=0
+  for i in range(1000):
+    gd_obj.gd_step()
+    y1=gd_obj.get_fs()
+    r2_old=r2
+    r2=(1-np.mean((y_tr-y1[:n_tr,:])**2)/np.mean((y_tr-np.mean(y_tr))**2))
+    if (r2-r2_old)/step_size<0.01 and p<p_max:
+      p+=1
+      print(i,p)
+      Ks=kern(xs,x_tr,p)
+      gd_obj.update(Ks,y1)
+      if plot:# and i%10/step_size==0:
+        print(p)
+        ax.cla()
+        ax.plot(x_tr,y_tr,'ok')
+        ax.plot(xs[xs_argsort,0],y1[xs_argsort,0])
+        fig.savefig('figures/kgd3.pdf')
+        sleep(1)
+    if r2>0.999:
+      break
+  if plot:
+    print(p)
+    ax.cla()
+    ax.plot(x_tr,y_tr,'ok')
+    ax.plot(xs[xs_argsort,0],y1[xs_argsort,0])
+    fig.savefig('figures/kgd3.pdf')
+    sleep(.1)
+  return gd_obj.get_fs()
+
+
+def kgd3(xs,x_tr,y_tr,sigma0=None,step_size=0.01,kern=None, sigma_min=0, t_max=1e4, plot=False):
+  if plot:
+    fig,ax=plt.subplots(1,1,figsize=(12,12))
+    xs_argsort=xs.argsort(0)
+  sigma=np.max(x_tr)-np.min(x_tr) if sigma0 is None else sigma0
+  if kern is None:
+    kern = lambda x1, x2, sigma: np.exp(-0.5*np.square((x1-x2.T)/sigma))
+  y1=np.zeros(xs.shape)
+  Ks=kern(xs,x_tr,sigma)
+  gd_obj=gd_alg(Ks,y_tr,'gd','pred',step_size)
+  n_tr=y_tr.shape[0]
+  r2=0
+  for i in range(int(t_max/step_size)):
+    gd_obj.gd_step()
+    y1=gd_obj.get_fs()
+    r2_old=r2
+    r2=(1-np.mean((y_tr-y1[:n_tr,:])**2)/np.mean((y_tr-np.mean(y_tr))**2))
+    if (r2-r2_old)/step_size<0.05 and sigma>sigma_min:
+      sigma=sigma/(1+step_size)
+      Ks=kern(xs,x_tr,sigma)
+      gd_obj.update(Ks,y1)
+    if r2>0.9999:
+      break
+    if plot and i%100/step_size==0:
+      print(sigma)
+      ax.cla()
+      ax.plot(x_tr,y_tr,'ok')
+      ax.plot(xs[xs_argsort,0],y1[xs_argsort,0])
+      fig.savefig('figures/kgd3.pdf')
+      sleep(1)
+  if plot:
+    print(sigma)
+    ax.cla()
+    ax.plot(x_tr,y_tr,'ok')
+    ax.plot(xs[xs_argsort,0],y1[xs_argsort,0])
+    fig.savefig('figures/kgd3.pdf')
+    sleep(1)
+  return gd_obj.get_fs()
+
+
+def kgd2(xs,x_tr,y_tr,t,sigma0=None,step_size=0.01,kern=None, sigma_min=None):
+  sigma=np.max(x_tr)-np.min(x_tr) if sigma0 is None else sigma0
+  if kern is None:
+    kern = lambda x1, x2, sigma: np.exp(-0.5*np.square((x1-x2.T)/sigma))
+  y1=np.zeros(xs.shape)
+  Ks=kern(xs,x_tr,sigma)
+  gd_obj=gd_alg(Ks,y_tr,'gd','pred',step_size)
+  n_tr=y_tr.shape[0]
+  r2=0
+  r2s=[]
+  sigmas=[]
+  for i in range(int(t/step_size)):
+    gd_obj.gd_step()
+    y1=gd_obj.get_fs()
+    r2_old=r2
+    r2=(1-np.mean((y_tr-y1[:n_tr,:])**2)/np.mean((y_tr-np.mean(y_tr))**2))
+    if (r2-r2_old)/step_size<0.01:
+    #if True:
+      #sigma=sigma/(1+alpha*step_size*sigma)
+      sigma=sigma/(1+step_size)
+      Ks=kern(xs,x_tr,sigma)
+      gd_obj.update(Ks,y1)
+    r2s.append(r2)
+    sigmas.append(sigma)
+    if r2>0.999:
+      break
+  return gd_obj.get_fs(), i*step_size, r2s, sigmas
+
+
+def kgd1(xs,x_tr,y_tr,y_val,sigmas,step_size=0.01):
+  kern = lambda x1, x2, sigma: np.exp(-0.5*np.square((x1-x2.T)/sigma))
+  Ks=kern(xs,x_tr,sigmas[0])
+  gd_obj=gd_alg(Ks,y_tr,'gd','pred',step_size)
+  n_tr=y_tr.shape[0]
+  r2s=[]
+  for sigma in sigmas:
+    gd_obj.gd_step()
+    y1=gd_obj.get_fs()
+    r2s.append(1-np.mean((y_val-y1[n_tr:,:])**2)/np.mean((y_val-np.mean(y_val))**2))
+    Ks=kern(xs,x_tr,sigma)
+    gd_obj.update(Ks,y1)
+  return r2s
 
 def kgd(xs,x_tr,y_tr,t,sigma0=None,step_size=0.01,gamma=0,alpha=0,kern=None, sigma_min=None):
   sigma=np.max(x_tr)-np.min(x_tr) if sigma0 is None else sigma0
@@ -11,7 +136,7 @@ def kgd(xs,x_tr,y_tr,t,sigma0=None,step_size=0.01,gamma=0,alpha=0,kern=None, sig
     y1_old=np.copy(y1)
     gd_obj.gd_step()
     y1=gd_obj.get_fs()
-    if np.max(np.abs(y1))>1000 or np.max(np.abs(y1-y1_old))<1e-4:
+    if np.max(np.abs(y1))>1000 or np.max(np.abs(y1-y1_old))<1e-5:
       break
     #Update kernel
     if alpha>0:
