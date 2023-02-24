@@ -8,7 +8,15 @@ def kgd(xs,x_tr,y_tr_in,sigma0=None,step_size=0.01,kern=None, sigma_min=0, t_max
     xs_argsort=xs.argsort(0)
   
   if kern is None:
-    kern = lambda x1, x2, sigma: np.exp(-0.5*np.square((x1-x2.T)/sigma))
+    def kern(X,Y,sigma):
+      import numpy as np
+      if X.shape[1]==1 and Y.shape[1]==1:
+        return np.exp(-0.5*((X-Y.T)/sigma)**2)
+      X2=np.sum(X**2,1).reshape((-1,1))
+      XY=X.dot(Y.T)
+      Y2=np.sum(Y**2,1).reshape((-1,1))
+      D2=X2-2*XY+Y2.T
+      return np.exp(-0.5*D2/sigma**2)
 
   n_tr=x_tr.shape[0]
   ns=xs.shape[0]
