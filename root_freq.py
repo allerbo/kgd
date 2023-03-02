@@ -9,24 +9,24 @@ import sys
 
 NS=500
 
-def make_data(seed):
-  np.random.seed(seed)
-  N_TR=100
-  def fy(x):
-    #return np.sin(2*np.pi*np.sqrt((x+1)))
-    #return np.sin(2*np.pi*(x+1)**0.3)
-    return np.sin(2*np.pi*np.sign(x)*np.abs(x)**(1/3))
-  #x_tr=np.random.exponential(10,(N_TR,1))
-  x_tr=np.random.normal(0,50,(N_TR,1))
-  y_tr=fy(x_tr)+np.random.normal(0,.2,x_tr.shape)
-  x_val=np.random.uniform(np.min(x_tr), np.max(x_tr), NS).reshape((-1,1))
-  y_val=fy(x_val)
-  #x1=np.linspace(np.min(x_tr), np.max(x_tr), 1000).reshape((-1,1))
-  x1=np.linspace(-5**3, 5**3, 1000).reshape((-1,1))
-  y1=fy(x1)
-  lbda_bounds=[1e-4,.1]
-  sigma_bounds=[1e-2,100]
-  return x_tr, y_tr, x_val, y_val, x1, y1, lbda_bounds, sigma_bounds
+#def make_data(seed):
+#  np.random.seed(seed)
+#  N_TR=100
+#  def fy(x):
+#    #return np.sin(2*np.pi*np.sqrt((x+1)))
+#    #return np.sin(2*np.pi*(x+1)**0.3)
+#    return np.sin(2*np.pi*np.sign(x)*np.abs(x)**(1/3))
+#  #x_tr=np.random.exponential(10,(N_TR,1))
+#  x_tr=np.random.normal(0,50,(N_TR,1))
+#  y_tr=fy(x_tr)+np.random.normal(0,.2,x_tr.shape)
+#  x_val=np.random.uniform(np.min(x_tr), np.max(x_tr), NS).reshape((-1,1))
+#  y_val=fy(x_val)
+#  #x1=np.linspace(np.min(x_tr), np.max(x_tr), 1000).reshape((-1,1))
+#  x1=np.linspace(-5**3, 5**3, 1000).reshape((-1,1))
+#  y1=fy(x1)
+#  lbda_bounds=[1e-4,.1]
+#  sigma_bounds=[1e-2,100]
+#  return x_tr, y_tr, x_val, y_val, x1, y1, lbda_bounds, sigma_bounds
 
 def shift_root(x,power,shift):
   return np.sign(x)*((np.abs(x)+shift)**power-shift**power)
@@ -37,8 +37,8 @@ def make_data(seed=None):
   N_TR=100
   def fy(x):
     #return np.sin(4*2*np.pi*np.sign(x)*np.abs(x)**(1/4))
-    #return np.sin(4*2*np.pi*shift_root(x,1/4,0))
-    return np.sin(10*2*np.pi*shift_root(x,1/4,0))
+    return np.sin(4*2*np.pi*shift_root(x,1/4,0))
+    #return np.sin(10*2*np.pi*shift_root(x,1/10,0.1))
   x_tr=np.random.normal(0,1,(N_TR,1))
   y_tr=fy(x_tr)+np.random.normal(0,.2,x_tr.shape)
   x_val=np.random.uniform(np.min(x_tr), np.max(x_tr), NS).reshape((-1,1))
